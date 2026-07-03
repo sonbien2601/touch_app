@@ -76,14 +76,12 @@ class PairingRemoteDatasource {
       }
 
       final ownerRef = _firestore.collection('users').doc(ownerId);
-      final ownerSnapshot = await transaction.get(ownerRef);
       final joinerSnapshot = await transaction.get(joinerRef);
-      final owner = ownerSnapshot.data();
       final joiner = joinerSnapshot.data();
-      if (owner == null || joiner == null) {
+      if (joiner == null) {
         throw StateError('User profile is missing.');
       }
-      if (owner['coupleId'] != null || joiner['coupleId'] != null) {
+      if (joiner['coupleId'] != null) {
         throw StateError('A user already has a couple.');
       }
 
