@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,7 +17,6 @@ import '../../domain/usecases/send_touch.dart';
 final touchRemoteDatasourceProvider = Provider<TouchRemoteDatasource>((ref) {
   return TouchRemoteDatasource(
     firestore: FirebaseFirestore.instance,
-    functions: FirebaseFunctions.instanceFor(region: 'asia-southeast1'),
   );
 });
 

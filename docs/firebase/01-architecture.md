@@ -30,7 +30,6 @@ Backend:
 - Firebase Authentication
 - Cloud Firestore
 - Firebase Cloud Messaging
-- Cloud Functions for Firebase, TypeScript
 - Firebase Storage for avatar if needed
 - Firebase Crashlytics
 - Firebase Analytics optional
@@ -99,7 +98,7 @@ Flutter may:
 - authenticate
 - read allowed Firestore data
 - update its own safe user fields
-- call HTTPS callable functions
+- write allowed Firestore documents through transactions guarded by Security Rules
 
 Flutter must not:
 
@@ -108,11 +107,7 @@ Flutter must not:
 - create touches directly
 - consume invite codes directly
 
-Cloud Functions own all sensitive writes:
-
-- `createInviteCode`
-- `joinCouple`
-- `sendTouch`
+Firestore transactions own app writes. Security Rules validate membership and document shape.
 - `updatePresence`
 - `cleanupExpiredInviteCodes`
 
@@ -131,7 +126,7 @@ Reason:
 
 ### Pairing
 
-Chosen: invite code is created and consumed only by Cloud Functions in a Firestore transaction.
+Chosen: invite code is created and consumed by Flutter through Firestore transactions.
 
 Reason:
 
@@ -141,7 +136,7 @@ Reason:
 
 ### Touch
 
-Chosen: Flutter calls `sendTouch`; Cloud Function writes `touches` and sends FCM.
+Chosen: Flutter writes touch data through Firestore transactions.
 
 Reason:
 
@@ -151,11 +146,10 @@ Reason:
 
 ### Presence
 
-Chosen: app lifecycle updates via `updatePresence` callable plus direct safe own-user update if needed later.
+Chosen: app lifecycle updates safe own-user fields directly in Firestore.
 
 Tradeoff:
 
 - Firestore is not a realtime connection detector.
 - For iOS, lifecycle-based presence is acceptable for a minimal private app.
 - Later upgrade path: Realtime Database presence mirror if stronger online accuracy is required.
-

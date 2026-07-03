@@ -10,6 +10,7 @@ void main() {
 
     await queue.enqueue(
       QueuedTouch(
+        uid: 'user-1',
         createdAt: DateTime.utc(2026, 7, 3),
         device: 'ios',
         appVersion: '1.0.0',
@@ -23,4 +24,3 @@ void main() {
     expect(await queue.load(), isEmpty);
   });
 }
-

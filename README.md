@@ -21,4 +21,4 @@ See:
 - [Security Rules](firebase/firestore.rules)
 - [Roadmap](docs/firebase/03-roadmap.md)
 
-Backend policy: Firebase only. Do not add ASP.NET Core, PostgreSQL, or a custom server backend.
+Backend policy: Firebase Auth + Cloud Firestore only. Do not add ASP.NET Core, PostgreSQL, custom servers, or Cloud Functions unless billing is explicitly approved.

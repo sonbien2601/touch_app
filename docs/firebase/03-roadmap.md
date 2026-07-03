@@ -37,8 +37,7 @@ Delivered:
 - Apple sign-in code path via Firebase Auth provider
 - home placeholder after auth
 - basic test scaffold
-- Cloud Functions TypeScript scaffold
-- `updatePresence` callable foundation
+- Firestore-only backend decision
 - local Flutter SDK and Firebase CLI installed
 
 Verified:
@@ -52,12 +51,6 @@ flutter test
 
 Also verified:
 
-```powershell
-cd functions
-npm install
-npm run build
-```
-
 Still required from owner before device/runtime auth validation:
 
 - `GoogleService-Info.plist` for Firebase project `touchapp-65d7b`
@@ -69,8 +62,8 @@ Still required from owner before device/runtime auth validation:
 
 Status: complete.
 
-- `createInviteCode` Cloud Function
-- `joinCouple` Cloud Function
+- Firestore transaction create invite code
+- Firestore transaction join couple
 - pairing UI
 - one-couple-only enforcement
 
@@ -79,7 +72,7 @@ Delivered:
 - Pairing Clean Architecture feature
 - invite code validation
 - loading/error/empty UI states
-- Cloud Functions transaction enforcement
+- Firestore Security Rules enforcement
 - Firestore Security Rules remain client-write locked for couples/invite codes
 - unit tests for invite code validation
 - Firebase config test for official iOS options
@@ -88,7 +81,7 @@ Delivered:
 
 Status: complete.
 
-- `sendTouch` Cloud Function
+- Firestore transaction send touch
 - touch repository/use case/controller
 - heart press debounce
 - touch history query, latest 100
@@ -102,11 +95,11 @@ Delivered:
 - offline queue with reconnect flush support
 - touch history screen with pagination
 - statistics cards
-- Firestore `touches` write path through Cloud Functions
+- Firestore `touches` write path through client transaction
 - `users` and `couples` touch statistics updates
 - unit tests for mapper, validation, controller, offline queue
 - integration-style offline/reconnect test artifact
-- GitHub Actions CI for Flutter and Firebase Functions
+- GitHub Actions CI for Flutter and Firestore deploy
 
 ## Phase 5 - Push Notification
 
@@ -135,7 +128,7 @@ Planned:
 
 - unit tests for repositories/use cases
 - widget tests for auth/pairing/home
-- Cloud Function emulator tests
+- Firestore rules tests
 - Firestore rules tests
 
 ## Phase 8 - iOS Build and Deployment Docs

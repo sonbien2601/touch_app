@@ -1,12 +1,13 @@
 # Firebase Auto Deploy
 
-GitHub Actions deploys Firebase automatically when code is pushed to `main`.
+GitHub Actions deploys Firestore automatically when code is pushed to `main`.
 
 Workflow:
 
 1. Flutter analyze/test
-2. Firebase Functions TypeScript build
-3. Deploy Firestore rules/indexes and Cloud Functions
+2. Deploy Firestore rules/indexes
+
+No Cloud Functions are deployed because this project is currently Firebase Auth + Firestore only.
 
 Required GitHub secret:
 
@@ -18,16 +19,13 @@ Value: the full JSON content of a Firebase service account for project `touchapp
 
 Recommended permissions:
 
-- Cloud Functions Admin
 - Firebase Rules Admin
 - Cloud Datastore Index Admin
-- Service Account User
-- Artifact Registry Writer
-- Cloud Build Editor
+- Service Usage Viewer
 
-Manual deploy remains available:
+Manual deploy:
 
 ```powershell
-firebase deploy --only firestore,functions --project touchapp-65d7b
+firebase deploy --only firestore --project touchapp-65d7b
 ```
 

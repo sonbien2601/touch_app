@@ -23,7 +23,7 @@ Implemented in Phase 2:
 - Apple Sign In code path through Firebase Auth provider
 - Firestore user document creation
 - Crashlytics bootstrap
-- Cloud Functions TypeScript scaffold at `../../functions`
+- Firestore-only pairing and touch flow
 
 Required later from owner:
 

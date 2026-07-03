@@ -1,4 +1,5 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
@@ -9,11 +10,19 @@ import '../../domain/usecases/create_invite_code.dart';
 import '../../domain/usecases/join_couple.dart';
 
 final pairingRemoteDatasourceProvider = Provider<PairingRemoteDatasource>((ref) {
-  return PairingRemoteDatasource(FirebaseFunctions.instanceFor(region: 'asia-southeast1'));
+  return PairingRemoteDatasource(FirebaseFirestore.instance);
 });
 
 final pairingRepositoryProvider = Provider<PairingRepository>((ref) {
-  return FirebasePairingRepository(ref.watch(pairingRemoteDatasourceProvider));
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) {
+    throw StateError('User must be signed in.');
+  }
+
+  return FirebasePairingRepository(
+    datasource: ref.watch(pairingRemoteDatasourceProvider),
+    uid: uid,
+  );
 });
 
 final pairingControllerProvider =
@@ -73,4 +82,3 @@ class PairingController extends StateNotifier<AsyncValue<PairingState>> {
     return 'Cannot pair right now. Please try again.';
   }
 }
-

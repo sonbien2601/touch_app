@@ -45,11 +45,13 @@ class OfflineTouchQueue {
 
 class QueuedTouch {
   const QueuedTouch({
+    required this.uid,
     required this.createdAt,
     required this.device,
     required this.appVersion,
   });
 
+  final String uid;
   final DateTime createdAt;
   final String device;
   final String appVersion;
@@ -57,6 +59,7 @@ class QueuedTouch {
   Map<String, dynamic> toJson() {
     return {
       'createdAt': createdAt.toIso8601String(),
+      'uid': uid,
       'device': device,
       'appVersion': appVersion,
     };
@@ -65,9 +68,9 @@ class QueuedTouch {
   factory QueuedTouch.fromJson(Map<String, dynamic> json) {
     return QueuedTouch(
       createdAt: DateTime.parse(json['createdAt'] as String),
+      uid: json['uid'] as String? ?? '',
       device: json['device'] as String,
       appVersion: json['appVersion'] as String,
     );
   }
 }
-

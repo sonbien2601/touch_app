@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -96,6 +95,7 @@ class FirebaseTouchRepository implements TouchRepository {
     final online = await _isOnline();
     final packageInfo = await _packageInfo;
     final queued = QueuedTouch(
+      uid: uid,
       createdAt: DateTime.now().toUtc(),
       device: 'ios',
       appVersion: packageInfo.version,
@@ -130,9 +130,13 @@ class FirebaseTouchRepository implements TouchRepository {
 
   Future<void> _sendQueuedTouch(QueuedTouch touch) async {
     try {
-      await _remote.sendTouch(device: touch.device, appVersion: touch.appVersion);
-    } on FirebaseFunctionsException catch (error) {
-      throw AuthException(_functionMessage(error));
+      await _remote.sendTouch(
+        uid: touch.uid,
+        device: touch.device,
+        appVersion: touch.appVersion,
+      );
+    } on StateError catch (error) {
+      throw AuthException(error.message);
     }
   }
 
@@ -217,11 +221,4 @@ class FirebaseTouchRepository implements TouchRepository {
     return null;
   }
 
-  String _functionMessage(FirebaseFunctionsException error) {
-    return switch (error.code) {
-      'unauthenticated' => 'Please sign in again.',
-      'failed-precondition' => error.message ?? 'Touch is not available.',
-      _ => 'Cannot send touch right now. Please try again.',
-    };
-  }
 }
