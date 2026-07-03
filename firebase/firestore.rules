@@ -55,12 +55,16 @@ service cloud.firestore {
           'fcmToken',
           'battery',
           'coupleId',
+          'lastTouchAt',
+          'totalTouch',
           'createdAt',
           'updatedAt'
         ])
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.coupleId == null;
+        && request.resource.data.coupleId == null
+        && request.resource.data.lastTouchAt == null
+        && request.resource.data.totalTouch == 0;
     }
 
     function safeUserUpdate(uid) {
@@ -96,7 +100,7 @@ service cloud.firestore {
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
         && request.resource.data.coupleId == resource.data.coupleId
-        && request.resource.data.totalTouch == resource.data.totalTouch + 1
+        && request.resource.data.totalTouch == ((resource.data.totalTouch is int) ? resource.data.totalTouch : 0) + 1
         && (uid == request.auth.uid || sameCouple(uid));
     }
 

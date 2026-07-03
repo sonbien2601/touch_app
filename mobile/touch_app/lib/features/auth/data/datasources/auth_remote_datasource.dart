@@ -53,6 +53,8 @@ class AuthRemoteDatasource {
         'updatedAt': null,
       },
       'coupleId': null,
+      'lastTouchAt': null,
+      'totalTouch': 0,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
