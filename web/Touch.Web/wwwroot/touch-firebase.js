@@ -8,6 +8,12 @@ import {
   updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
+  getMessaging,
+  getToken,
+  isSupported as isMessagingSupported,
+  onMessage,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging.js";
+import {
   collection,
   doc,
   getDoc,
@@ -38,6 +44,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const webPushVapidKey = "";
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 let unsubscribeHome = null;
 const lastTouchByUser = new Map();
@@ -120,6 +127,11 @@ function notify(title, body) {
   });
 }
 
+async function messaging() {
+  if (!(await isMessagingSupported())) return null;
+  return getMessaging(app);
+}
+
 window.touchFirebase = {
   listenAuth(dotNet) {
     onAuthStateChanged(auth, (user) => dotNet.invokeMethodAsync("OnAuthChanged", userDto(user)));
@@ -144,7 +156,35 @@ window.touchFirebase = {
 
   async requestNotifications() {
     if (!("Notification" in window)) return "unsupported";
-    return await Notification.requestPermission();
+    if (!auth.currentUser) return "signed-out";
+    if (!webPushVapidKey) return "missing-vapid-key";
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return permission;
+
+    const messagingInstance = await messaging();
+    if (!messagingInstance) return "unsupported";
+
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    const token = await getToken(messagingInstance, {
+      vapidKey: webPushVapidKey,
+      serviceWorkerRegistration: registration,
+    });
+
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      fcmToken: token,
+      fcmTokens: {
+        web: token,
+      },
+      updatedAt: serverTimestamp(),
+    });
+
+    onMessage(messagingInstance, (payload) => {
+      vibrate([120, 50, 160]);
+      notify(payload.notification?.title || "Touch", payload.notification?.body || "Someone is thinking of you.");
+    });
+
+    return "granted";
   },
 
   async createCode(uid) {

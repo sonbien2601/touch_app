@@ -13,6 +13,8 @@
 
 - Improve mobile web UI polish
 - Add PWA manifest and install prompt
+- Add FCM sender backend for closed-browser push notifications
+- Configure Web Push VAPID public key
 - Restore production-grade Firestore Security Rules before sharing widely
 - Add safer error messages
 - Add optional email verification
