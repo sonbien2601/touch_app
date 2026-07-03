@@ -39,6 +39,30 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/couples/$(coupleId));
     }
 
+    function afterInvite(code) {
+      return getAfter(/databases/$(database)/documents/inviteCodes/$(code));
+    }
+
+    function validUserCreate(uid) {
+      return isSelf(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'name',
+          'email',
+          'avatar',
+          'online',
+          'lastSeen',
+          'fcmToken',
+          'battery',
+          'coupleId',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.coupleId == null;
+    }
+
     function safeUserUpdate(uid) {
       return isSelf(uid)
         && request.resource.data.diff(resource.data).changedKeys()
@@ -52,16 +76,18 @@ service cloud.firestore {
       let coupleId = request.resource.data.coupleId;
       let couple = afterCouple(coupleId).data;
       let code = couple.inviteCode;
+      let inviteAfter = afterInvite(code).data;
+      let inviteBefore = invite(code).data;
       return signedIn()
         && request.resource.data.diff(resource.data).changedKeys().hasOnly(['coupleId', 'updatedAt'])
         && resource.data.coupleId == null
         && coupleId is string
         && uid in couple.members
         && request.auth.uid in couple.members
-        && (uid == request.auth.uid || invite(code).data.ownerId == uid)
-        && getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.consumedAt != null
-        && getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.consumedBy == request.auth.uid
-        && getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.consumedCoupleId == coupleId;
+        && (uid == request.auth.uid || inviteBefore.ownerId == uid)
+        && inviteAfter.consumedAt != null
+        && inviteAfter.consumedBy == request.auth.uid
+        && inviteAfter.consumedCoupleId == coupleId;
     }
 
     function validTouchUserUpdate(uid) {
@@ -87,6 +113,9 @@ service cloud.firestore {
 
     function validCoupleCreate() {
       let code = request.resource.data.inviteCode;
+      let inviteBefore = invite(code).data;
+      let inviteAfter = afterInvite(code).data;
+      let ownerId = inviteBefore.ownerId;
       return signedIn()
         && request.resource.data.keys().hasOnly(['userA', 'userB', 'members', 'inviteCode', 'createdAt', 'lastTouchAt', 'totalTouch', 'streak', 'longestStreak'])
         && request.auth.uid in request.resource.data.members
@@ -96,14 +125,14 @@ service cloud.firestore {
         && request.resource.data.userA != request.resource.data.userB
         && code is string
         && exists(/databases/$(database)/documents/inviteCodes/$(code))
-        && invite(code).data.ownerId in request.resource.data.members
-        && invite(code).data.ownerId != request.auth.uid
-        && invite(code).data.consumedAt == null
-        && request.time < invite(code).data.expiredAt
-        && getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.consumedBy == request.auth.uid
-        && getAfter(/databases/$(database)/documents/inviteCodes/$(code)).data.consumedCoupleId == request.resource.id
+        && ownerId in request.resource.data.members
+        && ownerId != request.auth.uid
+        && inviteBefore.consumedAt == null
+        && request.time < inviteBefore.expiredAt
+        && inviteAfter.consumedBy == request.auth.uid
+        && inviteAfter.consumedCoupleId == request.resource.id
         && userDoc(request.auth.uid).data.coupleId == null
-        && userDoc(invite(code).data.ownerId).data.coupleId == null
+        && userDoc(ownerId).data.coupleId == null
         && request.resource.data.totalTouch == 0
         && request.resource.data.streak == 0
         && request.resource.data.longestStreak == 0;
@@ -126,9 +155,7 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create: if isSelf(uid)
-        && request.resource.data.uid == uid
-        && request.resource.data.coupleId == null;
+      allow create: if validUserCreate(uid);
 
       allow read: if isSelf(uid) || sameCouple(uid);
 
@@ -158,6 +185,7 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if validInviteCodeCreate(code);
       allow update: if signedIn()
+        && request.resource.data.consumedCoupleId is string
         && resource.data.ownerId != request.auth.uid
         && request.resource.data.diff(resource.data).changedKeys().hasOnly(['consumedAt', 'consumedBy', 'consumedCoupleId'])
         && resource.data.consumedAt == null
@@ -165,9 +193,9 @@ service cloud.firestore {
         && resource.data.consumedCoupleId == null
         && request.resource.data.consumedAt != null
         && request.resource.data.consumedBy == request.auth.uid
-        && getAfter(/databases/$(database)/documents/couples/$(request.resource.data.consumedCoupleId)).data.inviteCode == code
-        && resource.data.ownerId in getAfter(/databases/$(database)/documents/couples/$(request.resource.data.consumedCoupleId)).data.members
-        && request.auth.uid in getAfter(/databases/$(database)/documents/couples/$(request.resource.data.consumedCoupleId)).data.members;
+        && afterCouple(request.resource.data.consumedCoupleId).data.inviteCode == code
+        && resource.data.ownerId in afterCouple(request.resource.data.consumedCoupleId).data.members
+        && request.auth.uid in afterCouple(request.resource.data.consumedCoupleId).data.members;
       allow delete: if false;
     }
   }

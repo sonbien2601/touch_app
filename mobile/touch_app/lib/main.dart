@@ -12,18 +12,22 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await configureCrashReporting();
-  final preferences = await SharedPreferences.getInstance();
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await configureCrashReporting();
+    final preferences = await SharedPreferences.getInstance();
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-      ],
-      child: const TouchApp(),
-    ),
-  );
+    runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: const TouchApp(),
+      ),
+    );
+  } catch (error) {
+    runApp(BootstrapErrorApp(error: error));
+  }
 }
 
 class TouchApp extends ConsumerWidget {
@@ -48,6 +52,62 @@ class TouchApp extends ConsumerWidget {
 
         return child ?? const SizedBox.shrink();
       },
+    );
+  }
+}
+
+class BootstrapErrorApp extends StatelessWidget {
+  const BootstrapErrorApp({
+    required this.error,
+    super.key,
+  });
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Touch',
+      theme: AppTheme.cupertinoTheme(),
+      home: CupertinoPageScaffold(
+        backgroundColor: CupertinoColors.systemBackground,
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    CupertinoIcons.exclamationmark_triangle,
+                    size: 40,
+                    color: CupertinoColors.systemRed,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Touch cannot start on this platform.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    error.toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: CupertinoColors.secondaryLabel,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
