@@ -101,7 +101,7 @@ Rules:
 
 ## Consistency Rules
 
-Flutter must use Firestore transactions for:
+The web client must use Firestore transactions for:
 
 - creating invite code after checking owner has no `coupleId`
 - joining couple after checking both users have no `coupleId`

@@ -1,24 +1,17 @@
 # Touch
 
-Touch is a private iOS app for exactly two people. It has no chat, no feed, no calls, and no social graph.
+Touch is a private web app for exactly two people. It has no chat, no feed, no calls, and no social graph.
 
-Current direction: Flutter + Firebase only.
+Current stack:
 
-The production goal is simple:
+- .NET Blazor WebAssembly
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Hosting
 
-- one large heart button
-- authenticated touch action
-- persisted touch history in Firestore
-- FCM push notification routed to APNs on iOS
-- in-app heart animation and haptics when foregrounded
+Production URL:
 
-Current status: Firebase/Flutter Phase 1 complete.
+- https://touchapp-65d7b.web.app
+- https://touchapp-65d7b.firebaseapp.com
 
-See:
-
-- [Firebase Flutter Architecture](docs/firebase/01-architecture.md)
-- [Firestore Design](docs/firebase/02-firestore-design.md)
-- [Security Rules](firebase/firestore.rules)
-- [Roadmap](docs/firebase/03-roadmap.md)
-
-Backend policy: Firebase Auth + Cloud Firestore only. Do not add ASP.NET Core, PostgreSQL, custom servers, or Cloud Functions unless billing is explicitly approved.
+Backend policy: Firebase Auth + Cloud Firestore only. No ASP.NET server, PostgreSQL, custom server, or Cloud Functions unless billing is explicitly approved.

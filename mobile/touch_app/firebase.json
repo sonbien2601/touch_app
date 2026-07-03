@@ -1,1 +1,0 @@
-{"projectId":"touchapp-65d7b","firestore":{"rules":"../../firebase/firestore.rules","indexes":"../../firebase/firestore.indexes.json"},"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"touchapp-65d7b","configurations":{"ios":"1:603507359681:ios:cfae871f494d751c90b940"}}}}}}
