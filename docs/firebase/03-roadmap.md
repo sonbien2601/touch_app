@@ -86,12 +86,27 @@ Delivered:
 
 ## Phase 4 - Touch
 
-Planned:
+Status: complete.
 
 - `sendTouch` Cloud Function
 - touch repository/use case/controller
 - heart press debounce
 - touch history query, latest 100
+
+Delivered:
+
+- Cupertino home dashboard
+- paired/empty/loading/error states
+- animated hero heart button with haptics
+- touch repository contract and Firebase implementation
+- offline queue with reconnect flush support
+- touch history screen with pagination
+- statistics cards
+- Firestore `touches` write path through Cloud Functions
+- `users` and `couples` touch statistics updates
+- unit tests for mapper, validation, controller, offline queue
+- integration-style offline/reconnect test artifact
+- GitHub Actions CI for Flutter and Firebase Functions
 
 ## Phase 5 - Push Notification
 

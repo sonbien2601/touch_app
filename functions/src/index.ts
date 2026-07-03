@@ -41,6 +41,27 @@ function normalizeCode(value: unknown): string {
   return code;
 }
 
+function stringValue(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+}
+
+function isYesterdayOrToday(lastTouchAt: Timestamp | undefined): {sameDay: boolean; yesterday: boolean} {
+  if (!lastTouchAt) {
+    return {sameDay: false, yesterday: false};
+  }
+
+  const now = new Date();
+  const last = lastTouchAt.toDate();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const lastDay = new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  return {
+    sameDay: today === lastDay,
+    yesterday: today - lastDay === dayMs,
+  };
+}
+
 export const updatePresence = onCall(async (request) => {
   const uid = requireUid(request.auth?.uid);
 
@@ -148,6 +169,10 @@ export const joinCouple = onCall(async (request) => {
       userB: members[1],
       members,
       createdAt: now,
+      lastTouchAt: null,
+      totalTouch: 0,
+      streak: 0,
+      longestStreak: 0,
     });
 
     transaction.update(ownerRef, {
@@ -168,6 +193,91 @@ export const joinCouple = onCall(async (request) => {
       coupleId: coupleRef.id,
       userA: members[0],
       userB: members[1],
+    };
+  });
+});
+
+export const sendTouch = onCall(async (request) => {
+  const uid = requireUid(request.auth?.uid);
+  const senderRef = db.collection("users").doc(uid);
+  const device = stringValue(request.data?.device, "ios");
+  const appVersion = stringValue(request.data?.appVersion, "unknown");
+
+  return db.runTransaction(async (transaction) => {
+    const senderSnapshot = await transaction.get(senderRef);
+    if (!senderSnapshot.exists) {
+      throw new HttpsError("failed-precondition", "User profile is missing.");
+    }
+
+    const sender = senderSnapshot.data();
+    const coupleId = sender?.coupleId as string | undefined;
+    if (!coupleId) {
+      throw new HttpsError("failed-precondition", "User is not paired.");
+    }
+
+    const coupleRef = db.collection("couples").doc(coupleId);
+    const coupleSnapshot = await transaction.get(coupleRef);
+    if (!coupleSnapshot.exists) {
+      throw new HttpsError("failed-precondition", "Couple is missing.");
+    }
+
+    const couple = coupleSnapshot.data() ?? {};
+    const members = couple.members as string[] | undefined;
+    if (!members?.includes(uid) || members.length !== 2) {
+      throw new HttpsError("permission-denied", "User is not part of this couple.");
+    }
+
+    const receiverId = members.find((member) => member !== uid);
+    if (!receiverId) {
+      throw new HttpsError("failed-precondition", "Receiver is missing.");
+    }
+
+    const receiverRef = db.collection("users").doc(receiverId);
+    const receiverSnapshot = await transaction.get(receiverRef);
+    if (!receiverSnapshot.exists) {
+      throw new HttpsError("failed-precondition", "Receiver profile is missing.");
+    }
+
+    const now = FieldValue.serverTimestamp();
+    const touchRef = db.collection("touches").doc();
+    const streakState = isYesterdayOrToday(couple.lastTouchAt as Timestamp | undefined);
+    const previousStreak = typeof couple.streak === "number" ? couple.streak : 0;
+    const nextStreak = streakState.sameDay ? previousStreak : streakState.yesterday ? previousStreak + 1 : 1;
+    const previousLongest = typeof couple.longestStreak === "number" ? couple.longestStreak : 0;
+
+    transaction.set(touchRef, {
+      id: touchRef.id,
+      coupleId,
+      senderId: uid,
+      receiverId,
+      createdAt: now,
+      device,
+      appVersion,
+    });
+
+    transaction.update(coupleRef, {
+      lastTouchAt: now,
+      totalTouch: FieldValue.increment(1),
+      streak: nextStreak,
+      longestStreak: Math.max(previousLongest, nextStreak),
+    });
+
+    transaction.update(senderRef, {
+      lastTouchAt: now,
+      totalTouch: FieldValue.increment(1),
+      updatedAt: now,
+    });
+
+    transaction.update(receiverRef, {
+      lastTouchAt: now,
+      totalTouch: FieldValue.increment(1),
+      updatedAt: now,
+    });
+
+    return {
+      touchId: touchRef.id,
+      coupleId,
+      receiverId,
     };
   });
 });
