@@ -15,6 +15,7 @@ appsettings.Local.json
 .packages
 build/
 node_modules/
+.firebase/
 functions/lib/
 functions/node_modules/
 ios/Pods/

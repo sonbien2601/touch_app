@@ -1,0 +1,9 @@
+<div class="stat">
+    <b>@Value</b>
+    <span>@Label</span>
+</div>
+
+@code {
+    [Parameter] public int Value { get; set; }
+    [Parameter] public string Label { get; set; } = "";
+}

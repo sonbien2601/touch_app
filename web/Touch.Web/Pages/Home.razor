@@ -1,0 +1,170 @@
+@page "/"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Touch</PageTitle>
+
+<main class="shell">
+    <section class="phone">
+        <header>
+            <strong>Touch</strong>
+            @if (_user is not null)
+            {
+                <button class="ghost" @onclick="SignOut">Sign out</button>
+            }
+        </header>
+
+        @if (_loading)
+        {
+            <div class="center">Loading...</div>
+        }
+        else if (_user is null)
+        {
+            <div class="auth">
+                <h1>Touch</h1>
+                <p>One heart, two people.</p>
+                @if (_register)
+                {
+                    <input placeholder="Name" @bind="_name" />
+                }
+                <input placeholder="Email" @bind="_email" />
+                <input placeholder="Password" type="password" @bind="_password" />
+                <button @onclick="SubmitAuth">@(_register ? "Create account" : "Sign in")</button>
+                <button class="link" @onclick="() => _register = !_register">
+                    @(_register ? "I already have an account" : "Create new account")
+                </button>
+                <small>@_error</small>
+            </div>
+        }
+        else if (_home?.Paired == true)
+        {
+            <div class="home">
+                <div class="avatars"><span>●</span><span>♥</span></div>
+                <h2>@_home.MyName + @_home.PartnerName</h2>
+                <p class="ok">Connected</p>
+                <button class="heart @(_sending ? "sending" : "")" disabled="@_sending" @onclick="SendTouch">♥</button>
+                <p>Last Touch: @Format(_home.LastTouch)</p>
+                <p>Last Online: @Format(_home.LastOnline)</p>
+                <div class="stats">
+                    <Stat Value="@_home.Statistics.Total" Label="Total" />
+                    <Stat Value="@_home.Statistics.Today" Label="Today" />
+                    <Stat Value="@_home.Statistics.Week" Label="Week" />
+                    <Stat Value="@_home.Statistics.Month" Label="Month" />
+                    <Stat Value="@_home.Statistics.Streak" Label="Streak" />
+                    <Stat Value="@_home.Statistics.Best" Label="Best" />
+                </div>
+                <small>@_error</small>
+            </div>
+        }
+        else
+        {
+            <div class="pair">
+                <h1>Pair</h1>
+                <h2>@(_inviteCode ?? "No code yet")</h2>
+                <button @onclick="CreateCode">Create code</button>
+                <input placeholder="Enter code" maxlength="6" @bind="_joinCode" />
+                <button class="link" @onclick="Join">Join</button>
+                <small>@_error</small>
+            </div>
+        }
+    </section>
+</main>
+
+@code {
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<Home>? _dotNet;
+    private AppUser? _user;
+    private HomeState? _home;
+    private bool _loading = true;
+    private bool _register;
+    private bool _sending;
+    private string _name = "";
+    private string _email = "";
+    private string _password = "";
+    private string _joinCode = "";
+    private string? _inviteCode;
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "/touch-firebase.js");
+        _dotNet = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("touchFirebase.listenAuth", _dotNet);
+    }
+
+    [JSInvokable]
+    public async Task OnAuthChanged(AppUser? user)
+    {
+        _user = user;
+        _loading = false;
+        if (user is not null && _dotNet is not null)
+        {
+            await JS.InvokeVoidAsync("touchFirebase.listenHome", user.Uid, _dotNet);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnHomeChanged(HomeState home)
+    {
+        _home = home;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SubmitAuth()
+    {
+        await Run(async () =>
+        {
+            if (_register)
+            {
+                await JS.InvokeAsync<AppUser>("touchFirebase.register", _email, _password, _name);
+                return;
+            }
+            await JS.InvokeAsync<AppUser>("touchFirebase.signIn", _email, _password);
+        });
+    }
+
+    private Task SignOut() => Run(() => JS.InvokeVoidAsync("touchFirebase.signOut").AsTask());
+
+    private async Task CreateCode()
+    {
+        await Run(async () => _inviteCode = await JS.InvokeAsync<string>("touchFirebase.createCode", _user!.Uid));
+    }
+
+    private Task Join() => Run(() => JS.InvokeVoidAsync("touchFirebase.join", _user!.Uid, _joinCode).AsTask());
+
+    private async Task SendTouch()
+    {
+        if (_sending) return;
+        _sending = true;
+        await Run(() => JS.InvokeVoidAsync("touchFirebase.sendTouch", _user!.Uid).AsTask());
+        await Task.Delay(1200);
+        _sending = false;
+    }
+
+    private async Task Run(Func<Task> action)
+    {
+        try
+        {
+            _error = null;
+            await action();
+        }
+        catch (Exception error)
+        {
+            _error = error.Message;
+        }
+    }
+
+    private static string Format(string? value) => string.IsNullOrWhiteSpace(value) ? "No data" : DateTime.Parse(value).ToLocalTime().ToString("g");
+
+    public async ValueTask DisposeAsync()
+    {
+        _dotNet?.Dispose();
+        if (_module is not null) await _module.DisposeAsync();
+    }
+
+    public sealed record AppUser(string Uid, string? Email, string Name);
+    public sealed record HomeState(bool Paired, string? CoupleId, string MyName, string? PartnerName, string? LastOnline, string? LastTouch, TouchStats Statistics);
+    public sealed record TouchStats(int Total, int Today, int Week, int Month, int Streak, int Best);
+}
