@@ -40,6 +40,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 let unsubscribeHome = null;
+const lastTouchByUser = new Map();
 
 function userDto(user) {
   if (!user) return null;
@@ -98,6 +99,27 @@ async function buildStats(coupleId, couple) {
   };
 }
 
+async function latestTouch(coupleId) {
+  const snap = await getDocs(query(collection(db, "touches"), where("coupleId", "==", coupleId), orderBy("createdAt", "desc"), limit(1)));
+  if (snap.empty) return null;
+  return snap.docs[0].data();
+}
+
+function vibrate(pattern = [80, 40, 120]) {
+  if ("vibrate" in navigator) {
+    navigator.vibrate(pattern);
+  }
+}
+
+function notify(title, body) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  new Notification(title, {
+    body,
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+  });
+}
+
 window.touchFirebase = {
   listenAuth(dotNet) {
     onAuthStateChanged(auth, (user) => dotNet.invokeMethodAsync("OnAuthChanged", userDto(user)));
@@ -118,6 +140,11 @@ window.touchFirebase = {
 
   async signOut() {
     await signOut(auth);
+  },
+
+  async requestNotifications() {
+    if (!("Notification" in window)) return "unsupported";
+    return await Notification.requestPermission();
   },
 
   async createCode(uid) {
@@ -191,6 +218,14 @@ window.touchFirebase = {
       const partnerId = (couple.members || []).find((x) => x !== uid);
       const partnerSnap = partnerId ? await getDoc(doc(db, "users", partnerId)) : null;
       const partner = partnerSnap?.data() || {};
+      const latest = await latestTouch(user.coupleId);
+      const latestId = latest?.id || null;
+      const previousId = lastTouchByUser.get(uid);
+      if (latestId && previousId && latestId !== previousId && latest.senderId !== uid) {
+        vibrate([120, 50, 160]);
+        notify("Touch", "Someone is thinking of you.");
+      }
+      if (latestId) lastTouchByUser.set(uid, latestId);
       await dotNet.invokeMethodAsync("OnHomeChanged", {
         paired: true,
         coupleId: user.coupleId,
@@ -198,12 +233,14 @@ window.touchFirebase = {
         partnerName: partner.name || "Partner",
         lastOnline: dateValue(partner.lastSeen),
         lastTouch: dateValue(couple.lastTouchAt),
+        lastSenderId: latest?.senderId || null,
         statistics: await buildStats(user.coupleId, couple),
       });
     });
   },
 
   async sendTouch(uid) {
+    vibrate([50]);
     await runTransaction(db, async (tx) => {
       const senderRef = doc(db, "users", uid);
       const senderSnap = await tx.get(senderRef);
@@ -232,6 +269,7 @@ window.touchFirebase = {
       tx.update(senderRef, { lastTouchAt: serverTimestamp(), totalTouch: increment(1), updatedAt: serverTimestamp() });
       tx.update(receiverRef, { lastTouchAt: serverTimestamp(), totalTouch: increment(1), updatedAt: serverTimestamp() });
     });
+    notify("Touch sent", "Your heart was delivered.");
   },
 };
 

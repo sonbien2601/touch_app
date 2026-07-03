@@ -39,12 +39,13 @@
         else if (_home?.Paired == true)
         {
             <div class="home">
-                <div class="avatars"><span>●</span><span>♥</span></div>
+                <div class="avatars"><span>&#9679;</span><span>&#9829;</span></div>
                 <h2>@_home.MyName + @_home.PartnerName</h2>
                 <p class="ok">Connected</p>
-                <button class="heart @(_sending ? "sending" : "")" disabled="@_sending" @onclick="SendTouch">♥</button>
+                <button class="heart @(_sending ? "sending" : "")" disabled="@_sending" @onclick="SendTouch">&#9829;</button>
                 <p>Last Touch: @Format(_home.LastTouch)</p>
                 <p>Last Online: @Format(_home.LastOnline)</p>
+                <button class="link" @onclick="RequestNotifications">Enable notifications</button>
                 <div class="stats">
                     <Stat Value="@_home.Statistics.Total" Label="Total" />
                     <Stat Value="@_home.Statistics.Today" Label="Today" />
@@ -143,6 +144,21 @@
         _sending = false;
     }
 
+    private async Task RequestNotifications()
+    {
+        await Run(async () =>
+        {
+            var result = await JS.InvokeAsync<string>("touchFirebase.requestNotifications");
+            _error = result switch
+            {
+                "granted" => "Notifications enabled.",
+                "denied" => "Notifications blocked in browser settings.",
+                "unsupported" => "This browser does not support notifications.",
+                _ => "Notifications not enabled."
+            };
+        });
+    }
+
     private async Task Run(Func<Task> action)
     {
         try
@@ -165,6 +181,6 @@
     }
 
     public sealed record AppUser(string Uid, string? Email, string Name);
-    public sealed record HomeState(bool Paired, string? CoupleId, string MyName, string? PartnerName, string? LastOnline, string? LastTouch, TouchStats Statistics);
+    public sealed record HomeState(bool Paired, string? CoupleId, string MyName, string? PartnerName, string? LastOnline, string? LastTouch, string? LastSenderId, TouchStats Statistics);
     public sealed record TouchStats(int Total, int Today, int Week, int Month, int Streak, int Best);
 }
