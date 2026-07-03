@@ -172,10 +172,7 @@ service cloud.firestore {
     }
 
     match /touches/{touchId} {
-      allow read: if signedIn()
-        && (resource.data.senderId == request.auth.uid
-          || resource.data.receiverId == request.auth.uid)
-        && isCoupleMember(resource.data.coupleId);
+      allow read: if isCoupleMember(resource.data.coupleId);
 
       allow create: if validTouchCreate();
       allow update, delete: if false;
