@@ -156,6 +156,7 @@ window.touchFirebase = {
 
   async requestNotifications() {
     if (!("Notification" in window)) return "unsupported";
+    if (!("serviceWorker" in navigator)) return "unsupported";
     if (!auth.currentUser) return "signed-out";
     if (!webPushVapidKey) return "missing-vapid-key";
 
@@ -165,7 +166,8 @@ window.touchFirebase = {
     const messagingInstance = await messaging();
     if (!messagingInstance) return "unsupported";
 
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { updateViaCache: "none" });
+    await registration.update();
     const token = await getToken(messagingInstance, {
       vapidKey: webPushVapidKey,
       serviceWorkerRegistration: registration,

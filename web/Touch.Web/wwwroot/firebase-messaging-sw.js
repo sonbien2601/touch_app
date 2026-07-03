@@ -11,21 +11,49 @@ firebase.initializeApp({
   measurementId: "G-V9134MRH68",
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "Touch";
-  const options = {
-    body: payload.notification?.body || "Someone is thinking of you.",
+function showTouchNotification(payload) {
+  payload = payload || {};
+  var notification = payload.notification || {};
+  var title = notification.title || "Touch";
+  var options = {
+    body: notification.body || "Someone is thinking of you.",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     data: payload.data || {},
   };
 
-  self.registration.showNotification(title, options);
+  return self.registration.showNotification(title, options);
+}
+
+try {
+  var messaging = firebase.messaging();
+  messaging.onBackgroundMessage(showTouchNotification);
+} catch (error) {
+  console.warn("Firebase Messaging is not available in this browser.", error);
+}
+
+self.addEventListener("push", function (event) {
+  var payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (error) {
+      payload = { notification: { body: event.data.text() } };
+    }
+  }
+
+  event.waitUntil(showTouchNotification(payload));
 });
 
-self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", function (event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow("/"));
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
+    for (var i = 0; i < clientList.length; i += 1) {
+      var client = clientList[i];
+      if ("focus" in client) return client.focus();
+    }
+
+    if (clients.openWindow) return clients.openWindow("/");
+    return undefined;
+  }));
 });
