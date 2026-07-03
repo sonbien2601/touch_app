@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function coupleIdOf(uid) {
+      return userDoc(uid).data.coupleId;
+    }
+
+    function sameCouple(uid) {
+      return signedIn()
+        && uid != request.auth.uid
+        && coupleIdOf(request.auth.uid) != null
+        && coupleIdOf(request.auth.uid) == coupleIdOf(uid);
+    }
+
+    function isCoupleMember(coupleId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/couples/$(coupleId))
+        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.members;
+    }
+
+    function safeUserUpdate(uid) {
+      return isSelf(uid)
+        && request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(['name', 'avatar', 'online', 'lastSeen', 'fcmToken', 'battery', 'updatedAt'])
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.coupleId == resource.data.coupleId;
+    }
+
+    match /users/{uid} {
+      allow create: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.coupleId == null;
+
+      allow read: if isSelf(uid) || sameCouple(uid);
+
+      allow update: if safeUserUpdate(uid);
+
+      allow delete: if false;
+    }
+
+    match /couples/{coupleId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    match /touches/{touchId} {
+      allow read: if signedIn()
+        && (resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid)
+        && isCoupleMember(resource.data.coupleId);
+
+      allow create, update, delete: if false;
+    }
+
+    match /inviteCodes/{code} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+  }
+}
+
