@@ -31,15 +31,7 @@
         { "fieldPath": "ownerId", "order": "ASCENDING" },
         { "fieldPath": "expiredAt", "order": "DESCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "inviteCodes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "expiredAt", "order": "ASCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
 }
-
